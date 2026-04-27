@@ -20,6 +20,16 @@ npm install
 npm run dev
 ```
 
+## Browser deployment
+
+This repository includes a GitHub Pages workflow. After the app is merged to
+`main`, enable GitHub Pages with **Source: GitHub Actions** in the repository
+settings. The deployed game will be available at:
+
+```text
+https://mwalkley7.github.io/Rummikub/
+```
+
 ## Verification
 
 ```bash
