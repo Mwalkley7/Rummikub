@@ -68,6 +68,7 @@ export type ValidationResult = {
 const COLORS: TileColor[] = ["red", "blue", "black", "orange"];
 const INITIAL_HAND_SIZE = 14;
 const INITIAL_MELD_MINIMUM = 30;
+const STATIC_BOARD_SLOTS = 18;
 export const TURN_SECONDS = 60;
 
 export function createInitialGame(): GameState {
@@ -92,11 +93,12 @@ export function createInitialGame(): GameState {
     player.rack = sortTiles(player.rack);
   });
 
-  const snapshot = makeSnapshot(players, [], deck);
+  const board = createBoardSlots();
+  const snapshot = makeSnapshot(players, board, deck);
 
   return {
     players,
-    board: [],
+    board,
     pool: deck,
     currentPlayerIndex: 0,
     turnSecondsLeft: TURN_SECONDS,
@@ -129,6 +131,13 @@ export function createDeck(): GameTile[] {
 
   deck.push({ id: "joker-1", isJoker: true }, { id: "joker-2", isJoker: true });
   return deck;
+}
+
+export function createBoardSlots(): BoardSet[] {
+  return Array.from({ length: STATIC_BOARD_SLOTS }, (_, index) => ({
+    id: `slot-${index}`,
+    tiles: [],
+  }));
 }
 
 export function sortTiles(tiles: GameTile[]): GameTile[] {
@@ -392,13 +401,16 @@ export function makeBotMove(state: GameState): GameState {
   bot.rack = bot.rack.filter((tile) => !playedIds.has(tile.id));
   bot.hasOpened = true;
 
-  const board = [
-    ...cloneBoard(state.board),
-    {
+  const board = cloneBoard(state.board);
+  const openSlot = board.find((set) => set.tiles.length === 0);
+  if (openSlot) {
+    openSlot.tiles = candidate.tiles;
+  } else {
+    board.push({
       id: createSetId(),
       tiles: candidate.tiles,
-    },
-  ];
+    });
+  }
 
   const won = bot.rack.length === 0;
   const nextState: GameState = {
@@ -453,10 +465,13 @@ export function moveTile(
 
   const added = addTileAt(removed.state, removed.tile, destination);
   const movedFromRack = source.type === "rack" && source.playerId === state.currentPlayerIndex;
-  const manipulatedBoardTile =
-    source.type === "board" ||
-    (destination.type === "board" &&
-      state.turnSnapshot.board.some((set) => set.id === destination.setId && set.tiles.length > 0));
+  const sourceWasOnBoardAtTurnStart =
+    source.type === "board" &&
+    state.turnSnapshot.board.some((set) => set.id === source.setId && set.tiles.some((tile) => tile.id === removed.tile?.id));
+  const destinationWasOccupiedAtTurnStart =
+    destination.type === "board" &&
+    state.turnSnapshot.board.some((set) => set.id === destination.setId && set.tiles.length > 0);
+  const manipulatedBoardTile = sourceWasOnBoardAtTurnStart || destinationWasOccupiedAtTurnStart;
   const movedIds = movedFromRack
     ? Array.from(new Set([...added.turnMovedTileIds, removed.tile.id]))
     : added.turnMovedTileIds;
@@ -486,7 +501,7 @@ export function removeTileAt(state: GameState, source: TileSource): { state: Gam
   }
 
   const [tile] = set.tiles.splice(source.index, 1);
-  return { state: { ...state, board: board.filter((boardSet) => boardSet.tiles.length > 0) }, tile: tile ?? null };
+  return { state: { ...state, board }, tile: tile ?? null };
 }
 
 export function addTileAt(
@@ -543,7 +558,12 @@ export function tileLabel(tile: GameTile): string {
 }
 
 export function tileDescription(tile: GameTile): string {
-  return tile.isJoker ? "Joker" : `${tile.color} ${tile.number}`;
+  return tile.isJoker ? `Joker ${tileCopyLabel(tile)}` : `${tile.color} ${tile.number}, copy ${tileCopyLabel(tile)}`;
+}
+
+export function tileCopyLabel(tile: GameTile): string {
+  const parts = tile.id.split("-");
+  return parts[parts.length - 1] ?? "1";
 }
 
 export function isNaturalTile(tile: GameTile): tile is Tile {

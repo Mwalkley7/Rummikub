@@ -7,13 +7,13 @@ import {
   TURN_SECONDS,
   canEndHumanTurn,
   createInitialGame,
-  createSetId,
   drawTile,
   makeBotMove,
   moveTile,
   openingValueForTurn,
   prepareNextTurn,
   resetTurn,
+  tileCopyLabel,
   tileDescription,
   tileLabel,
   validateBoard,
@@ -95,7 +95,12 @@ function App() {
       return;
     }
 
-    if (manipulatesBoard && !game.players[0].hasOpened) {
+    if (
+      manipulatesBoard &&
+      !game.players[0].hasOpened &&
+      destination.type === "board" &&
+      destination.setId !== payload.setId
+    ) {
       setGame((current) => ({
         ...current,
         message: "Complete your 30-point opening meld before rearranging existing board tiles.",
@@ -161,28 +166,11 @@ function App() {
     setGame((current) => resetTurn(current));
   }
 
-  function handleAddSet() {
-    if (!isHumanTurn) {
-      return;
-    }
-
-    setGame((current) => ({
-      ...current,
-      board: [...current.board, { id: createSetId(), tiles: [] }],
-      message: "New board space added. Drag tiles into it to build a meld.",
-    }));
-  }
-
   return (
     <main className="app-shell">
       <header className="hero">
         <div>
-          <p className="eyebrow">Offline Rummikub</p>
-          <h1>Play against three bot players</h1>
-          <p>
-            Standard rules, 30-point initial melds, joker support, manual tile dragging,
-            rearrangeable board sets, reset turn support, and a 60-second turn clock.
-          </p>
+          <h1>Rummikub</h1>
         </div>
         <button className="secondary" type="button" onClick={() => setGame(createInitialGame())}>
           New game
@@ -218,14 +206,8 @@ function App() {
         <div className="section-heading">
           <div>
             <h2>Board</h2>
-            <p>
-              Drag tiles from your rack into sets. You may rearrange existing board tiles, but every non-empty
-              set must be valid before ending your turn.
-            </p>
+            <p>Drop tiles into any open board space. Existing spaces can hold as many tiles as a valid set needs.</p>
           </div>
-          <button className="secondary" type="button" onClick={handleAddSet} disabled={!isHumanTurn}>
-            Add empty set
-          </button>
         </div>
 
         <div className="validation">
@@ -236,12 +218,10 @@ function App() {
           )}
         </div>
 
-        <div className="board" onDragOver={(event) => event.preventDefault()}>
-          {game.board.length === 0 ? (
-            <EmptySet onDrop={handleDrop} />
-          ) : (
-            game.board.map((set) => <BoardSetView key={set.id} set={set} onDrop={handleDrop} />)
-          )}
+        <div className="board-grid" onDragOver={(event) => event.preventDefault()}>
+          {game.board.map((set, index) => (
+            <BoardSetView key={set.id} set={set} slotNumber={index + 1} onDrop={handleDrop} />
+          ))}
         </div>
       </section>
 
@@ -298,9 +278,11 @@ function StatusCard({ label, value, detail }: { label: string; value: string; de
 
 function BoardSetView({
   set,
+  slotNumber,
   onDrop,
 }: {
   set: BoardSet;
+  slotNumber: number;
   onDrop: (
     event: React.DragEvent<HTMLElement>,
     destination: { type: "board"; setId: string; index?: number },
@@ -308,40 +290,27 @@ function BoardSetView({
 }) {
   return (
     <article
-      className="set"
+      className={set.tiles.length === 0 ? "set empty-board-slot" : "set"}
       onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => onDrop(event, { type: "board", setId: set.id })}
+      onDrop={(event) => {
+        event.stopPropagation();
+        onDrop(event, { type: "board", setId: set.id });
+      }}
     >
-      {set.tiles.length === 0 ? <span className="empty-set">Drop tiles here</span> : null}
+      {set.tiles.length === 0 ? (
+        <span className="empty-set">Open space {slotNumber}</span>
+      ) : null}
       {set.tiles.map((tile, index) => (
         <TileView
           key={tile.id}
           tile={tile}
           source={{ type: "board", setId: set.id, index }}
-          onDropBefore={(event) => onDrop(event, { type: "board", setId: set.id, index })}
+          onDropBefore={(event) => {
+            event.stopPropagation();
+            onDrop(event, { type: "board", setId: set.id, index });
+          }}
         />
       ))}
-    </article>
-  );
-}
-
-function EmptySet({
-  onDrop,
-}: {
-  onDrop: (
-    event: React.DragEvent<HTMLElement>,
-    destination: { type: "board"; setId: string; index?: number },
-  ) => void;
-}) {
-  const setId = "opening-set";
-
-  return (
-    <article
-      className="set empty-board"
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => onDrop(event, { type: "board", setId })}
-    >
-      <span className="empty-set">Drop your opening meld here</span>
     </article>
   );
 }
@@ -358,6 +327,7 @@ function TileView({
   onDropBefore?: (event: React.DragEvent<HTMLElement>) => void;
 }) {
   const className = tile.isJoker ? "tile joker" : `tile ${tile.color}`;
+  const copyLabel = tileCopyLabel(tile);
 
   return (
     <button
@@ -370,10 +340,14 @@ function TileView({
         event.dataTransfer.setData("application/x-rummikub-tile", JSON.stringify(source));
       }}
       onDragOver={(event) => event.preventDefault()}
-      onDrop={onDropBefore}
+      onDrop={(event) => {
+        event.stopPropagation();
+        onDropBefore?.(event);
+      }}
       aria-label={tileDescription(tile)}
     >
       <span>{tileLabel(tile)}</span>
+      <small>{copyLabel}</small>
     </button>
   );
 }
