@@ -11,7 +11,7 @@ body {
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  min-width: 1120px;
+  min-width: 1040px;
 }
 
 button {
@@ -38,11 +38,11 @@ button:disabled {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  padding: 1.5rem 2rem 1rem;
+  padding: 1rem 2rem 0.75rem;
 }
 
 .hero h1 {
-  font-size: clamp(2.25rem, 4vw, 4rem);
+  font-size: clamp(1.9rem, 3vw, 3.2rem);
   letter-spacing: -0.07em;
   line-height: 0.9;
   margin: 0;
@@ -50,7 +50,7 @@ button:disabled {
 
 .hero p {
   color: #d8cfb9;
-  margin: 0.75rem 0 0;
+  margin: 0.35rem 0 0;
   max-width: 52rem;
 }
 
@@ -81,7 +81,9 @@ button:disabled {
 
 .panel,
 .board,
-.rack-panel {
+.board-section,
+.rack-panel,
+.rack-section {
   background: rgba(8, 18, 13, 0.74);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 1.35rem;
@@ -173,11 +175,12 @@ button:disabled {
   margin-top: auto;
 }
 
-.board {
+.board,
+.board-section {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: 34rem;
+  min-height: 36rem;
   padding: 1rem;
 }
 
@@ -195,12 +198,85 @@ button:disabled {
 
 .board-sets {
   align-content: flex-start;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(4, minmax(13rem, 1fr));
+}
+
+.status-grid,
+.players {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 0 2rem 0.75rem;
+}
+
+.status-card,
+.player {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem;
+}
+
+.status-card span,
+.player span,
+.status-card small,
+.player small {
+  color: #c8bfaa;
+}
+
+.status-card strong,
+.player strong {
+  color: #fff8e7;
+}
+
+.player.active {
+  border-color: #ffd166;
+  box-shadow: 0 0 0 0.15rem rgba(255, 209, 102, 0.2);
+}
+
+.message-bar,
+.board-section,
+.rack-section {
+  margin: 0 2rem 0.75rem;
+}
+
+.message-bar {
+  background: rgba(255, 209, 102, 0.13);
+  border: 1px solid rgba(255, 209, 102, 0.28);
+  border-radius: 1rem;
+  color: #fff5d6;
+  padding: 0.85rem;
+}
+
+.section-heading {
+  align-items: center;
   display: flex;
-  flex-wrap: wrap;
   gap: 1rem;
+  justify-content: space-between;
+}
+
+.section-heading h2 {
+  margin: 0;
+}
+
+.section-heading p,
+.hint {
+  color: #d8cfb9;
+  margin: 0.35rem 0 0;
+}
+
+.board-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(3, minmax(16rem, 1fr));
 }
 
 .tile-set,
+.set,
 .empty-set {
   align-items: center;
   background: rgba(255, 255, 255, 0.08);
@@ -216,6 +292,31 @@ button:disabled {
 .empty-set {
   color: #d7ceb8;
   justify-content: center;
+}
+
+.tile-set.board-slot {
+  background: rgba(255, 255, 255, 0.065);
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.tile-set.empty-board-slot,
+.set.empty-board-slot {
+  align-items: center;
+  color: #b9b09f;
+  justify-content: center;
+}
+
+.set {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.slot-label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .set-valid {
@@ -238,11 +339,18 @@ button:disabled {
   min-width: 1.3rem;
 }
 
+.drop-slot:hover,
+.tile-set:hover,
+.set:hover {
+  border-color: rgba(255, 209, 102, 0.7);
+}
+
 .tile {
   align-items: center;
-  background: #fff8e7;
+  background: linear-gradient(180deg, #fffdf5 0%, #f7ead2 100%);
   border-radius: 0.8rem;
-  border-top: 0.35rem solid currentColor;
+  border: 0.12rem solid rgba(0, 0, 0, 0.12);
+  border-top: 0.42rem solid currentColor;
   box-shadow: 0 0.35rem 0.7rem rgba(0, 0, 0, 0.23);
   color: #1f1b14;
   display: flex;
@@ -270,25 +378,30 @@ button:disabled {
   color: #7c2d6f;
 }
 
-.tile-red {
+.tile.red {
   border-top-color: #dc2626;
+  color: #b91c1c;
 }
 
-.tile-blue {
+.tile.blue {
   border-top-color: #2563eb;
+  color: #1d4ed8;
 }
 
-.tile-black {
+.tile.black {
   border-top-color: #111827;
+  color: #111827;
 }
 
-.tile-orange {
+.tile.orange {
   border-top-color: #ea580c;
+  color: #c2410c;
 }
 
 .tile small {
-  color: #6f6556;
+  color: currentColor;
   font-size: 0.55rem;
+  opacity: 0.78;
   text-transform: uppercase;
 }
 
